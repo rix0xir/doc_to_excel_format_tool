@@ -48,21 +48,40 @@ def create_granted_patents_doc(excel_path, output_path, template_path):
     # Load the template document
     document = Document(template_path)
 
-    # Define categories, including missing ones
-    categories = [
-        'Seafloor', 'Land', 'Marine', 'Microseismic & Multiphysics',
-        'Processing', 'Reservoir', 'Geology', 'Data Management & Computing',
-        'Downhole'
-    ]
+    # Define categories and their corresponding widths as two lists
+    categories_list = ['Seafloor', 'Land', 'Marine', 'Microseismic & Multiphysics',
+                    'Processing', 'Reservoir', 'Geology', 'Data Management & Computing',
+                    'Downhole']
+    widths_list = [0.69, 0.58, 0.66, 0.93, 0.78, 0.73, 0.69, 0.95, 0.76]
 
     # Create index table with placeholders
-    index_table = document.add_table(rows=1, cols=len(categories))
+    index_table = document.add_table(rows=1, cols=len(categories_list))
+
+    # Disable auto-fit by setting a fixed layout for the table
+    tbl = index_table._tbl
+    tblPr = tbl.tblPr
+    tblLayout = OxmlElement('w:tblLayout')
+    tblLayout.set(qn('w:type'), 'fixed')
+    tblPr.append(tblLayout)
+
     index_row = index_table.rows[0].cells
-    for i, category in enumerate(categories):
-        paragraph = index_row[i].paragraphs[0]
+    for i, (category, width) in enumerate(zip(categories_list, widths_list)):
+        cell = index_row[i]
+        paragraph = cell.paragraphs[0]
         run = paragraph.add_run(category)
         run.font.size = Pt(10)
         paragraph.alignment = WD_ALIGN_PARAGRAPH.CENTER
+
+        # Set column width
+        cell.width = Inches(width)
+        tcPr = cell._tc.get_or_add_tcPr()
+        tcW = OxmlElement("w:tcW")
+        tcW.set(qn("w:w"), str(int(width * 1440)))  # Convert inches to twips
+        tcW.set(qn("w:type"), "dxa")
+        tcPr.append(tcW)
+
+
+
     
     # Set table borders for index table
     set_table_borders(index_table)
@@ -81,15 +100,32 @@ def create_granted_patents_doc(excel_path, output_path, template_path):
     table.autofit = False  # Disable autofit to manually set column widths
 
     # Set column widths
-    column_widths = [Inches(0.4), Inches(1.08), Inches(2.46), Inches(1.38), Inches(1.48)]
+    column_widths = [Inches(0.45), Inches(1.13), Inches(2.43), Inches(1.35), Inches(1.4)]
+
+    # Apply column widths to the table
+    table.autofit = False  # Disable auto-fit to manually set column widths
 
     # Set column headers
     headers = ['Sl No', 'Patent No', 'Title', 'Assignee', 'Inventors']
-    header_row = table.rows[0].cells
+    header_row = table.rows[0]
+
     for i, (header, width) in enumerate(zip(headers, column_widths)):
-        cell = header_row[i]
+        cell = header_row.cells[i]
         cell.text = header
-        cell.width = width
+
+        paragraph = cell.paragraphs[0]
+        paragraph.alignment = WD_ALIGN_PARAGRAPH.CENTER  # Center align headers
+
+        run = paragraph.runs[0] if paragraph.runs else paragraph.add_run()
+        run.bold = True
+        run.font.size = Pt(10)
+
+        # Apply width using cell._tc XML
+        cell._tc.get_or_add_tcPr().append(OxmlElement("w:tcW"))
+        cell._tc.get_or_add_tcPr().find(qn("w:tcW")).set(qn("w:w"), str(int(width.inches * 1440)))  # Convert inches to twips
+        cell._tc.get_or_add_tcPr().find(qn("w:tcW")).set(qn("w:type"), "dxa")
+
+
         paragraph = cell.paragraphs[0]
         paragraph.alignment = WD_ALIGN_PARAGRAPH.CENTER
         paragraph.runs[0].bold = True
@@ -98,10 +134,10 @@ def create_granted_patents_doc(excel_path, output_path, template_path):
         paragraph.space_before = Pt(0)
 
     # Process each category
-    for category in categories:
+    for category in categories_list:
         # Add category heading row
         cat_row = table.add_row()
-        cat_row.height = Inches(0.24)  # Set the row height to 0.27 inches
+        cat_row.height = Inches(0.24) 
         cat_row.height_rule = WD_ROW_HEIGHT_RULE.EXACTLY  # Ensures the row height is fixed
 
         cat_cell = cat_row.cells[0]
@@ -125,7 +161,7 @@ def create_granted_patents_doc(excel_path, output_path, template_path):
             
             if pat_no:
                 p = cell.paragraphs[0]
-                add_hyperlink(p, pat_no, pat_no.strip()) # The text and bookmark name are the same
+                add_hyperlink(p, pat_no, pat_no.strip())  # Use Patent No as the bookmark name
             else:
                 cell.text = pat_no  # Just display the text if no number exists
 
@@ -148,27 +184,27 @@ def create_granted_patents_doc(excel_path, output_path, template_path):
     # Save document
     document.save(output_path)
 
-# # Usage example:
+# Usage example:
 # create_granted_patents_doc(
 #     'C:/Users/Ayman/Documents/Abhijit_mail_attachments/Test_PW.xlsm',
-#     'part_3.docx',
+#     'part_5.docx',
 #     'basic_page_template.docx'
 # )
 
 
 
-# if __name__ == "__main__":
-#     excel_path = sys.argv[1]
-#     output_file = sys.argv[2]
-#     template_file = sys.argv[3]
+if __name__ == "__main__":
+    excel_path = sys.argv[1]
+    output_file = sys.argv[2]
+    template_file = sys.argv[3]
 
-#     create_granted_patents_doc(excel_path, output_file, template_file)
+    create_granted_patents_doc(excel_path, output_file, template_file)
 
-# Run the function directly to generate output
-excel_path = r"C:\Users\Ayman\Documents\Abhijit_mail_attachments\Test_PW.xlsm"
-output_file = "GP_output.docx"
-template_file = "basic_page_template.docx"
+# # Run the function directly to generate output
+# excel_path = r"C:\Users\Ayman\Documents\Abhijit_mail_attachments\Test_PW.xlsm"
+# output_file = "GP_output.docx"
+# template_file = "basic_page_template.docx"
 
-create_granted_patents_doc(excel_path, output_file, template_file)
+# create_granted_patents_doc(excel_path, output_file, template_file)
 
 print(f"Granted Patents index has been generated: {output_file}")

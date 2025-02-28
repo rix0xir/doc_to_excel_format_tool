@@ -48,21 +48,40 @@ def create_first_publications_doc(excel_path, output_path, template_path):
     # Load the template document
     document = Document(template_path)
 
-    # Define categories, including missing ones
-    categories = [
-        'Seafloor', 'Land', 'Marine', 'Microseismic & Multiphysics',
-        'Processing', 'Reservoir', 'Geology', 'Data Management & Computing',
-        'Downhole'
-    ]
+    # Define categories and their corresponding widths as two lists
+    categories_list = ['Seafloor', 'Land', 'Marine', 'Microseismic & Multiphysics',
+                    'Processing', 'Reservoir', 'Geology', 'Data Management & Computing',
+                    'Downhole']
+    widths_list = [0.69, 0.58, 0.66, 0.93, 0.78, 0.73, 0.69, 0.95, 0.76]
 
     # Create index table with placeholders
-    index_table = document.add_table(rows=1, cols=len(categories))
+    index_table = document.add_table(rows=1, cols=len(categories_list))
+
+    # Disable auto-fit by setting a fixed layout for the table
+    tbl = index_table._tbl
+    tblPr = tbl.tblPr
+    tblLayout = OxmlElement('w:tblLayout')
+    tblLayout.set(qn('w:type'), 'fixed')
+    tblPr.append(tblLayout)
+
     index_row = index_table.rows[0].cells
-    for i, category in enumerate(categories):
-        paragraph = index_row[i].paragraphs[0]
+    for i, (category, width) in enumerate(zip(categories_list, widths_list)):
+        cell = index_row[i]
+        paragraph = cell.paragraphs[0]
         run = paragraph.add_run(category)
         run.font.size = Pt(10)
         paragraph.alignment = WD_ALIGN_PARAGRAPH.CENTER
+
+        # Set column width
+        cell.width = Inches(width)
+        tcPr = cell._tc.get_or_add_tcPr()
+        tcW = OxmlElement("w:tcW")
+        tcW.set(qn("w:w"), str(int(width * 1440)))  # Convert inches to twips
+        tcW.set(qn("w:type"), "dxa")
+        tcPr.append(tcW)
+
+
+
     
     # Set table borders for index table
     set_table_borders(index_table)
@@ -81,7 +100,7 @@ def create_first_publications_doc(excel_path, output_path, template_path):
     table.autofit = False  # Disable autofit to manually set column widths
 
     # Set column widths
-    column_widths = [Inches(0.32), Inches(1.08), Inches(2.46), Inches(1.38), Inches(1.48)]
+    column_widths = [Inches(0.45), Inches(1.13), Inches(2.43), Inches(1.35), Inches(1.4)]
 
     # Apply column widths to the table
     table.autofit = False  # Disable auto-fit to manually set column widths
@@ -115,7 +134,7 @@ def create_first_publications_doc(excel_path, output_path, template_path):
         paragraph.space_before = Pt(0)
 
     # Process each category
-    for category in categories:
+    for category in categories_list:
         # Add category heading row
         cat_row = table.add_row()
         cat_row.height = Inches(0.24) 
@@ -165,27 +184,27 @@ def create_first_publications_doc(excel_path, output_path, template_path):
     # Save document
     document.save(output_path)
 
-# # Usage example:
-# create_granted_patents_doc(
+# Usage example:
+# create_first_publications_doc(
 #     'C:/Users/Ayman/Documents/Abhijit_mail_attachments/Test_PW.xlsm',
-#     'part_3.docx',
+#     'part_4.docx',
 #     'basic_page_template.docx'
 # )
 
 
 
-# if __name__ == "__main__":
-#     excel_path = sys.argv[1]
-#     output_file = sys.argv[2]
-#     template_file = sys.argv[3]
+if __name__ == "__main__":
+    excel_path = sys.argv[1]
+    output_file = sys.argv[2]
+    template_file = sys.argv[3]
 
-#     create_granted_patents_doc(excel_path, output_file, template_file)
+    create_first_publications_doc(excel_path, output_file, template_file)
 
-# Run the function directly to generate output
-excel_path = r"C:\Users\Ayman\Documents\Abhijit_mail_attachments\Test_PW.xlsm"
-output_file = "FP_output.docx"
-template_file = "basic_page_template.docx"
+# # Run the function directly to generate output
+# excel_path = r"C:\Users\Ayman\Documents\Abhijit_mail_attachments\Test_PW.xlsm"
+# output_file = "FP_output.docx"
+# template_file = "basic_page_template.docx"
 
-create_first_publications_doc(excel_path, output_file, template_file)
+# create_first_publications_doc(excel_path, output_file, template_file)
 
 print(f"First Publications index has been generated: {output_file}")
